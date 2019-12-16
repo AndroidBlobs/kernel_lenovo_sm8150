@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -190,11 +190,6 @@ static int dload_set(const char *val, const struct kernel_param *kp)
 
 	int old_val = download_mode;
 
-	if (!download_mode) {
-		pr_err("Error: SDI dynamic enablement is not supported\n");
-		return -EINVAL;
-	}
-
 	ret = param_set_int(val, kp);
 
 	if (ret)
@@ -207,9 +202,6 @@ static int dload_set(const char *val, const struct kernel_param *kp)
 	}
 
 	set_dload_mode(download_mode);
-
-	if (!download_mode)
-		scm_disable_sdi();
 
 	return 0;
 }
@@ -330,6 +322,10 @@ static void msm_restart_prepare(const char *cmd)
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_KEYS_CLEAR);
 			__raw_writel(0x7766550a, restart_reason);
+		} else if (!strcmp(cmd, "prod_fuse")) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_PROD_FUSE);
+			__raw_writel(0x7766550b, restart_reason);
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			int ret;
