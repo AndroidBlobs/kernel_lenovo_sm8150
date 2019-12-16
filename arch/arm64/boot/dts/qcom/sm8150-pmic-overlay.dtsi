@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -56,9 +56,41 @@
 			power-source = <1>;	/* 1.8V input supply */
 		};
 	};
+	#ifdef CONFIG_PRODUCT_HEART
+	madera_rtc_mclk2{
+	        madera_rtc_mclk2_enable:madera_rtc_mclk2_enable{
+	               pins = "gpio3";
+		       function = "func1";
+		       bias-disable;
+		       power-source = <0>;
+		       output-low;
+	       };
+                madera_rtc_mclk2_disable:madera_rtc_mclk2_disable{
+	               pins = "gpio3";
+		       function = "normal";
+		       power-source = <0>;
+		       bias-high-impedance;
+	       };
+	};
+	#endif
 };
 
 &pm8150l_gpios {
+#ifdef CONFIG_PRODUCT_HEART
+    cam_sensor_rear_dvdd_en_active: cam_sensor_rear_dvdd_en_active {
+        pins = "gpio3";
+        function = "normal";
+        power-source = <0>;
+        output-high;
+    };
+
+    cam_sensor_rear_dvdd_en_suspend: cam_sensor_rear_dvdd_en_suspend {
+        pins = "gpio3";
+        function = "normal";
+        power-source = <0>;
+        output-low;
+    };
+#else
 	cam_sensor_eldo4 {
 		cam_sensor_eldo4_default: cam_sensor_eldo4_default {
 			pins = "gpio3";
@@ -76,6 +108,7 @@
 			output-low;
 		};
 	};
+#endif
 };
 
 &pm8150b_charger {
@@ -88,12 +121,6 @@
 	};
 };
 
-&pm8150b_qnovo {
-	pinctrl-names = "q_state1", "q_state2";
-	pinctrl-0 = <&qnovo_fet_ctrl_state1>;
-	pinctrl-1 = <&qnovo_fet_ctrl_state2>;
-};
-
 &pm8150b_gpios {
 	smb_stat {
 		smb_stat_default: smb_stat_default {
@@ -102,26 +129,6 @@
 			input-enable;
 			bias-pull-up;
 			qcom,pull-up-strength = <PMIC_GPIO_PULL_UP_30>;
-			power-source = <0>;
-		};
-	};
-
-	qnovo_fet_ctrl {
-		qnovo_fet_ctrl_state1: qnovo_fet_ctrl_state1 {
-			pins = "gpio8";
-			function = "normal";
-			input-enable;
-			output-disable;
-			bias-disable;
-			power-source = <0>;
-		};
-
-		qnovo_fet_ctrl_state2: qnovo_fet_ctrl_state2 {
-			pins = "gpio8";
-			function = "normal";
-			input-enable;
-			output-disable;
-			bias-pull-down;
 			power-source = <0>;
 		};
 	};

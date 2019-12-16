@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,13 +10,3 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
-
-#include "sdmmagpiep.dtsi"
-#include "sdmmagpie-atp.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. SDMMAGPIEP PM6150 ATP";
-	compatible = "qcom,sdmmagpiep-atp", "qcom,sdmmagpiep", "qcom,atp";
-	qcom,board-id = <33 0>;
-};

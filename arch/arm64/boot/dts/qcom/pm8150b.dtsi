@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,8 +36,6 @@
 			compatible = "qcom,spmi-temp-alarm";
 			reg = <0x2400 0x100>;
 			interrupts = <0x2 0x24 0x0 IRQ_TYPE_EDGE_RISING>;
-			io-channels = <&pm8150b_vadc ADC_DIE_TEMP>;
-			io-channel-names = "thermal";
 			#thermal-sensor-cells = <0>;
 			qcom,temperature-threshold-set = <1>;
 		};
@@ -171,11 +169,22 @@
 			#cooling-cells = <2>;
 
 			qcom,pmic-revid = <&pm8150b_revid>;
-
-			qcom,thermal-mitigation
-					= <3000000 1500000 1000000 500000>;
-
 			qcom,chg-term-src = <1>;
+			qcom,chg-term-current-ma = <(-150)>;
+#ifdef CONFIG_PRODUCT_HEART
+			qcom,thermal-mitigation
+					= <3000000 2500000 1500000 900000 600000 300000>;
+			qcom,fcc-max-ua = <3000000>;
+			qcom,fv-max-uv = <4400000>;
+#elif defined(CONFIG_PRODUCT_ZIPPO)
+			qcom,thermal-mitigation
+                                        = <3600000 2500000 1500000 900000 600000 300000>;
+			qcom,fcc-max-ua = <3600000>;
+			qcom,fv-max-uv = <4420000>;
+#endif
+			qcom,usb-icl-ua = <3000000>;
+			qcom,float-option = <1>;
+
 			qcom,charger-temp-max = <800>;
 			qcom,smb-temp-max = <800>;
 
@@ -379,6 +388,14 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			qcom,pmic-revid = <&pm8150b_revid>;
+
+			qcom,hold-soc-while-full;
+			qcom,linearize-soc;
+			qcom,fg-force-load-profile;
+			qcom,fg-sys-term-current = <(-200)>;
+			qcom,fg-cutoff-voltage = <3400>;
+			qcom,fg-empty-voltage = <3000>;
+
 			status = "okay";
 
 			qcom,fg-batt-soc@4000 {
@@ -557,7 +574,6 @@
 		polling-delay = <0>;
 		thermal-governor = "user_space";
 		thermal-sensors = <&pm8150b_adc_tm ADC_AMUX_THM2_PU2>;
-		wake-capable-sensor;
 		trips {
 			active-config0 {
 				temperature = <125000>;
@@ -572,7 +588,6 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8150b_tz>;
-		wake-capable-sensor;
 
 		trips {
 			pm8150b_trip0: trip0 {
@@ -594,11 +609,11 @@
 	};
 
 	pm8150b-ibat-lvl0 {
+		disable-thermal-zone;
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8150b_bcl 0>;
-		wake-capable-sensor;
 
 		trips {
 			ibat_lvl0:ibat-lvl0 {
@@ -610,11 +625,11 @@
 	};
 
 	pm8150b-ibat-lvl1 {
+		disable-thermal-zone;
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8150b_bcl 1>;
-		wake-capable-sensor;
 
 		trips {
 			ibat_lvl1:ibat-lvl1 {
@@ -626,11 +641,11 @@
 	};
 
 	pm8150b-vbat-lvl0 {
+		disable-thermal-zone;
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "low_limits_cap";
 		thermal-sensors = <&pm8150b_bcl 2>;
-		wake-capable-sensor;
 		tracks-low;
 
 		trips {
@@ -643,11 +658,11 @@
 	};
 
 	pm8150b-vbat-lvl1 {
+		disable-thermal-zone;
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "low_limits_cap";
 		thermal-sensors = <&pm8150b_bcl 3>;
-		wake-capable-sensor;
 		tracks-low;
 
 		trips {
@@ -660,11 +675,11 @@
 	};
 
 	pm8150b-vbat-lvl2 {
+		disable-thermal-zone;
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "low_limits_cap";
 		thermal-sensors = <&pm8150b_bcl 4>;
-		wake-capable-sensor;
 		tracks-low;
 
 		trips {
@@ -677,11 +692,11 @@
 	};
 
 	soc {
+		disable-thermal-zone;
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "low_limits_cap";
 		thermal-sensors = <&bcl_soc>;
-		wake-capable-sensor;
 		tracks-low;
 
 		trips {

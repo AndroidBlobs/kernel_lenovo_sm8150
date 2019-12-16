@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,8 +29,6 @@
 			compatible = "qcom,spmi-temp-alarm";
 			reg = <0x2400 0x100>;
 			interrupts = <0x0 0x24 0x0 IRQ_TYPE_EDGE_RISING>;
-			io-channels = <&pm8150_vadc ADC_DIE_TEMP>;
-			io-channel-names = "thermal";
 			#thermal-sensor-cells = <0>;
 			qcom,temperature-threshold-set = <1>;
 		};
@@ -39,8 +37,12 @@
 			compatible = "qcom,qpnp-power-on";
 			reg = <0x800 0x100>;
 			interrupts = <0x0 0x8 0x0 IRQ_TYPE_NONE>,
-				     <0x0 0x8 0x1 IRQ_TYPE_NONE>;
-			interrupt-names = "kpdpwr", "resin";
+				     <0x0 0x8 0x1 IRQ_TYPE_NONE>,
+				     <0x0 0x8 0x3 IRQ_TYPE_NONE>,
+				     <0x0 0x8 0x4 IRQ_TYPE_NONE>,
+				     <0x0 0x8 0x5 IRQ_TYPE_NONE>;
+			interrupt-names = "kpdpwr", "resin",
+			        "kpdpwr-bark", "resin-bark", "kpdpwr-resin-bark";
 			qcom,pon-dbc-delay = <15625>;
 			qcom,kpdpwr-sw-debounce;
 			qcom,system-reset;
@@ -48,14 +50,29 @@
 
 			qcom,pon_1 {
 				qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR>;
+				qcom,support-reset = <1>;
+				qcom,s1-timer = <10256>;
+				qcom,s2-timer = <2000>;
+				qcom,s2-type = <8>;
 				qcom,pull-up;
 				linux,code = <KEY_POWER>;
+				qcom,use-bark;
 			};
 
 			qcom,pon_2 {
 				qcom,pon-type = <PON_POWER_ON_TYPE_RESIN>;
 				qcom,pull-up;
 				linux,code = <KEY_VOLUMEDOWN>;
+			};
+
+			qcom,pon_3 {
+				qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR_RESIN>;
+				qcom,support-reset = <1>;
+				qcom,s1-timer = <6720>;
+				qcom,s2-timer = <2000>;
+				qcom,s2-type = <1>;
+				qcom,pull-up;
+				qcom,use-bark;
 			};
 		};
 
@@ -167,7 +184,6 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8150_tz>;
-		wake-capable-sensor;
 
 		trips {
 			pm8150_trip0: trip0 {
