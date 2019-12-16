@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, The Linux Foundation.All rights reserved.
+ * Copyright (c) 2015-2018, The Linux Foundation.All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -409,14 +409,13 @@ int dsi_display_validate_mode(struct dsi_display *display,
 			      u32 flags);
 
 /**
- * dsi_display_validate_mode_change() - validates mode if variable refresh case
- *				or dynamic clk change case
+ * dsi_display_validate_mode_vrr() - validates mode if variable refresh case
  * @display:             Handle to display.
  * @mode:                Mode to be validated..
  *
  * Return: 0 if  error code.
  */
-int dsi_display_validate_mode_change(struct dsi_display *display,
+int dsi_display_validate_mode_vrr(struct dsi_display *display,
 			struct dsi_display_mode *cur_dsi_mode,
 			struct dsi_display_mode *mode);
 
@@ -607,7 +606,8 @@ void dsi_display_enable_event(struct drm_connector *connector,
  */
 int dsi_display_set_backlight(struct drm_connector *connector,
 		void *display, u32 bl_lvl);
-
+int dsi_display_set_backlight_hbm(struct drm_connector *connector,
+		void *display, u32 bl_lvl);
 /**
  * dsi_display_check_status() - check if panel is dead or alive
  * @connector:          Pointer to drm connector structure
@@ -615,6 +615,9 @@ int dsi_display_set_backlight(struct drm_connector *connector,
  * @te_check_override:	Whether check for TE from panel or default check
  */
 int dsi_display_check_status(struct drm_connector *connector, void *display,
+				bool te_check_override);
+
+int dsi_display_read_elvss_volt(struct drm_connector *connector, void *display,
 				bool te_check_override);
 
 /**

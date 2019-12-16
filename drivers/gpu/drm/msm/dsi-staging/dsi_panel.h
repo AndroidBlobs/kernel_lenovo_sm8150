@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,6 +29,10 @@
 #include "dsi_pwr.h"
 #include "dsi_parser.h"
 #include "msm_drv.h"
+
+#if defined(CONFIG_PRODUCT_HEART) || defined(CONFIG_PRODUCT_ZIPPO)
+#define CONFIG_BRIGHTNESS_HBM
+#endif
 
 #define MAX_BL_LEVEL 4096
 #define MAX_BL_SCALE_LEVEL 1024
@@ -72,18 +76,10 @@ enum dsi_dms_mode {
 };
 
 struct dsi_dfps_capabilities {
+	bool dfps_support;
 	enum dsi_dfps_type type;
 	u32 min_refresh_rate;
 	u32 max_refresh_rate;
-	u32 *dfps_list;
-	u32 dfps_list_len;
-	bool dfps_support;
-};
-
-struct dsi_dyn_clk_caps {
-	bool dyn_clk_support;
-	u32 *bit_clk_list;
-	u32 bit_clk_list_len;
 };
 
 struct dsi_pinctrl_info {
@@ -175,7 +171,6 @@ struct dsi_panel {
 	enum dsi_op_mode panel_mode;
 
 	struct dsi_dfps_capabilities dfps_caps;
-	struct dsi_dyn_clk_caps dyn_clk_caps;
 	struct dsi_panel_phy_props phy_props;
 
 	struct dsi_display_mode *cur_mode;
@@ -284,6 +279,12 @@ int dsi_panel_unprepare(struct dsi_panel *panel);
 int dsi_panel_post_unprepare(struct dsi_panel *panel);
 
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl);
+int dsi_panel_set_backlight_hbm(struct dsi_panel *panel, u32 bl_lvl);
+
+int dsi_panel_get_elvss_data(struct dsi_panel *panel);
+int dsi_panel_get_elvss_data_1(struct dsi_panel *panel);
+int dsi_panel_set_elvss_dim_off(struct dsi_panel *panel, u8 val);
+int dsi_panel_parse_elvss_config(struct dsi_panel *panel, u8 elv_vl);
 
 int dsi_panel_update_pps(struct dsi_panel *panel);
 
