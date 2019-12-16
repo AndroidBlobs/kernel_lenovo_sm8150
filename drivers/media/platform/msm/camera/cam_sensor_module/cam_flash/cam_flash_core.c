@@ -16,7 +16,6 @@
 #include "cam_flash_core.h"
 #include "cam_res_mgr_api.h"
 #include "cam_common_util.h"
-#include "cam_packet_util.h"
 
 static int cam_flash_prepare(struct cam_flash_ctrl *flash_ctrl,
 	bool regulator_enable)
@@ -210,6 +209,20 @@ int cam_flash_pmic_power_ops(struct cam_flash_ctrl *fctrl,
 	}
 
 	if (!regulator_enable) {
+#ifdef CONFIG_PRODUCT_HEART
+		//LENOVO_CUSTOM start
+		if ((fctrl->is_regulator_enabled == true) &&
+			((fctrl->flash_state == CAM_FLASH_STATE_ACQUIRE) ||
+			(fctrl->flash_state == CAM_FLASH_STATE_CONFIG))) {
+			rc = cam_flash_off(fctrl);
+				if (rc) {
+					CAM_ERR(CAM_FLASH,
+					"LED OFF FAILED: %d",
+					rc);
+			}
+		}
+		//LENOVO_CUSTOM end
+#endif
 		if ((fctrl->flash_state == CAM_FLASH_STATE_START) &&
 			(fctrl->is_regulator_enabled == true)) {
 			rc = cam_flash_prepare(fctrl, false);
@@ -221,6 +234,132 @@ int cam_flash_pmic_power_ops(struct cam_flash_ctrl *fctrl,
 
 	return rc;
 }
+
+#ifdef CONFIG_PRODUCT_HEART
+//LENOVO_CUSTOM turn i2c flash off by i2c register begin
+int msm_camera_i2c_flash_off(struct cam_flash_ctrl *fctrl)
+{
+#ifdef ENABLE_I2C_FLASH_READ_REGISTER_CHECK
+	uint32_t reg_value = 0;
+#endif
+	int rc = 0;
+	struct cam_sensor_i2c_reg_setting i2c_reg_settings;
+	struct cam_sensor_i2c_reg_array    i2c_reg_array;
+
+	CAM_INFO(CAM_FLASH, "msm_camera_i2c_flash_off enter");
+
+	i2c_reg_settings.addr_type=CAMERA_SENSOR_I2C_TYPE_BYTE;
+	i2c_reg_settings.data_type=CAMERA_SENSOR_I2C_TYPE_BYTE;
+	i2c_reg_settings.size=1;
+	i2c_reg_settings.delay=0;
+	i2c_reg_array.reg_addr = CAM_I2C_FLASH_AW36423_ENABLE_REGISTER;
+	i2c_reg_array.reg_data = 0x00;
+	i2c_reg_array.delay = 1;
+	i2c_reg_settings.reg_setting = &i2c_reg_array;
+
+	rc = camera_io_dev_write(&(fctrl->io_master_info),
+		&i2c_reg_settings);
+	if (rc < 0) {
+		CAM_ERR(CAM_FLASH,
+			"Failed to random write I2C settings: %d",
+			rc);
+		return rc;
+	}
+
+#ifdef ENABLE_I2C_FLASH_READ_REGISTER_CHECK
+	/* Register 0x00 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_CHIP_ID_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_CHIP_ID_REGISTER,
+			 reg_value);
+
+	/* Register 0x01 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_ENABLE_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_ENABLE_REGISTER,
+			 reg_value);
+
+	/* Register 0x02 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_IVFM_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_IVFM_REGISTER,
+			 reg_value);
+
+	/* Register 0x03 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_LED1_FLASH_BRIGHTNESS_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_LED1_FLASH_BRIGHTNESS_REGISTER,
+			 reg_value);
+
+	/* Register 0x04 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_LED1_TORCH_BRIGHTNESS_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_LED1_TORCH_BRIGHTNESS_REGISTER,
+			 reg_value);
+
+	/* Register 0x05 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_LED2_FLASH_BRIGHTNESS_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_LED2_FLASH_BRIGHTNESS_REGISTER,
+			 reg_value);
+
+	/* Register 0x06 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_LED2_TORCH_BRIGHTNESS_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_LED2_TORCH_BRIGHTNESS_REGISTER,
+			 reg_value);
+
+	/* Register 0x0B */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_FLASH_TORCH_TIMING_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_FLASH_TORCH_TIMING_REGISTER,
+			 reg_value);
+
+	/* Register 0x0F */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_FLAGS_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_FLAGS_REGISTER,
+			 reg_value);
+
+	/* Register 0x10 */
+	camera_io_dev_read(
+		&(fctrl->io_master_info),
+		CAM_I2C_FLASH_AW36423_DEVICE_ID_REGISTER,
+		&reg_value, CAMERA_SENSOR_I2C_TYPE_BYTE,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_INFO(CAM_FLASH, "### Reg[0x%x]=0x%x ",CAM_I2C_FLASH_AW36423_DEVICE_ID_REGISTER,
+			 reg_value);
+#endif
+	return rc;
+}
+#endif
 
 int cam_flash_i2c_power_ops(struct cam_flash_ctrl *fctrl,
 	bool regulator_enable)
@@ -267,6 +406,15 @@ int cam_flash_i2c_power_ops(struct cam_flash_ctrl *fctrl,
 		fctrl->is_regulator_enabled = true;
 	} else if ((!regulator_enable) &&
 		(fctrl->is_regulator_enabled == true)) {
+#ifdef CONFIG_PRODUCT_HEART
+		//LENOVO_CUSTOM turn i2c flash off by i2c register begin
+		rc = msm_camera_i2c_flash_off(fctrl);
+		if (rc) {
+			CAM_ERR(CAM_FLASH, "i2c flash off is failed:%d",
+				rc);
+		}
+		//LENOVO_CUSTOM turn i2c flash off by i2c register end
+#endif
 		rc = cam_sensor_util_power_down(power_info, soc_info);
 		if (rc) {
 			CAM_ERR(CAM_FLASH, "power down the core is failed:%d",
@@ -454,11 +602,13 @@ static int cam_flash_ops(struct cam_flash_ctrl *flash_ctrl,
 		for (i = 0; i < flash_ctrl->flash_num_sources; i++) {
 			if (flash_ctrl->flash_trigger[i]) {
 				max_current = soc_private->flash_max_current[i];
+				//LENOVO_START
 				if (flash_data->led_current_ma[i] <=
 					max_current)
-					curr = flash_data->led_current_ma[i];
+					curr = 750;//flash_data->led_current_ma[i];
 				else
-					curr = max_current;
+					curr = 750;//max_current;
+				//LENOVO_END
 			}
 			CAM_DBG(CAM_FLASH, "LED_Flash[%d]: Current: %d",
 				i, curr);
@@ -626,18 +776,18 @@ static int cam_flash_pmic_delete_req(struct cam_flash_ctrl *fctrl,
 }
 
 static int32_t cam_flash_slaveInfo_pkt_parser(struct cam_flash_ctrl *fctrl,
-	uint32_t *cmd_buf, size_t len)
+	uint32_t *cmd_buf)
 {
 	int32_t rc = 0;
 	struct cam_cmd_i2c_info *i2c_info = (struct cam_cmd_i2c_info *)cmd_buf;
 
-	if (len < sizeof(struct cam_cmd_i2c_info)) {
-		CAM_ERR(CAM_FLASH, "Not enough buffer");
-		return -EINVAL;
-	}
 	if (fctrl->io_master_info.master_type == CCI_MASTER) {
 		fctrl->io_master_info.cci_client->cci_i2c_master =
 			fctrl->cci_i2c_master;
+#ifdef CONFIG_PRODUCT_HEART
+		fctrl->io_master_info.cci_client->cci_device =
+			fctrl->cci_device;
+#endif
 		fctrl->io_master_info.cci_client->i2c_freq_mode =
 			i2c_info->i2c_freq_mode;
 		fctrl->io_master_info.cci_client->sid =
@@ -909,7 +1059,7 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 	uint32_t *offset = NULL;
 	uint32_t frm_offset = 0;
 	size_t len_of_buffer;
-	size_t remain_len;
+	size_t remaining_len_of_buff;
 	struct cam_flash_init *flash_init = NULL;
 	struct common_header  *cmn_hdr = NULL;
 	struct cam_control *ioctl_ctrl = NULL;
@@ -940,7 +1090,7 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		CAM_ERR(CAM_FLASH, "Failed in getting the packet : %d", rc);
 		return rc;
 	}
-	remain_len = len_of_buffer;
+	remaining_len_of_buff = len_of_buffer;
 	if ((sizeof(struct cam_packet) > len_of_buffer) ||
 		((size_t)config.offset >= len_of_buffer -
 		sizeof(struct cam_packet))) {
@@ -950,13 +1100,14 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		return -EINVAL;
 	}
 
-	remain_len -= (size_t)config.offset;
+	remaining_len_of_buff -= config.offset;
 	/* Add offset to the flash csl header */
 	csl_packet = (struct cam_packet *)(generic_ptr + config.offset);
 
-	if (cam_packet_util_validate_packet(csl_packet,
-		remain_len)) {
-		CAM_ERR(CAM_FLASH, "Invalid packet params");
+	if (((size_t)(csl_packet->header.size) > remaining_len_of_buff)) {
+		CAM_ERR(CAM_FLASH,
+			"Inval pkt_header_size: %zu, len:of_buff: %zu",
+			csl_packet->header.size, remaining_len_of_buff);
 		return -EINVAL;
 	}
 
@@ -972,6 +1123,14 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 
 	if (csl_packet->header.request_id > fctrl->last_flush_req)
 		fctrl->last_flush_req = 0;
+
+	remaining_len_of_buff -= sizeof(struct cam_packet);
+	if ((sizeof(struct cam_cmd_buf_desc) > remaining_len_of_buff) ||
+		(csl_packet->num_cmd_buf * sizeof(struct cam_cmd_buf_desc) >
+			remaining_len_of_buff)) {
+		CAM_ERR(CAM_FLASH, "InVal len: %zu", remaining_len_of_buff);
+		return -EINVAL;
+	}
 
 	switch (csl_packet->header.op_code & 0xFFFFFF) {
 	case CAM_FLASH_PACKET_OPCODE_INIT: {
@@ -997,15 +1156,6 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				CAM_ERR(CAM_FLASH, "invalid cmd buf");
 				return -EINVAL;
 			}
-
-			if ((len_of_buffer < sizeof(struct common_header)) ||
-				(cmd_desc[i].offset >
-				(len_of_buffer -
-				sizeof(struct common_header)))) {
-				CAM_ERR(CAM_FLASH, "invalid cmd buf length");
-				return -EINVAL;
-			}
-			remain_len = len_of_buffer - cmd_desc[i].offset;
 			cmd_buf += cmd_desc[i].offset / sizeof(uint32_t);
 			cmn_hdr = (struct common_header *)cmd_buf;
 
@@ -1016,12 +1166,6 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				total_cmd_buf_in_bytes);
 			switch (cmn_hdr->cmd_type) {
 			case CAMERA_SENSOR_FLASH_CMD_TYPE_INIT_INFO:
-				if (len_of_buffer <
-					sizeof(struct cam_flash_init)) {
-					CAM_ERR(CAM_FLASH, "Not enough buffer");
-					return -EINVAL;
-				}
-
 				flash_init = (struct cam_flash_init *)cmd_buf;
 				fctrl->flash_type = flash_init->flash_type;
 				cmd_length_in_bytes =
@@ -1033,7 +1177,7 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				break;
 			case CAMERA_SENSOR_CMD_TYPE_I2C_INFO:
 				rc = cam_flash_slaveInfo_pkt_parser(
-					fctrl, cmd_buf, remain_len);
+					fctrl, cmd_buf);
 				if (rc < 0) {
 					CAM_ERR(CAM_FLASH,
 					"Failed parsing slave info: rc: %d",
@@ -1056,7 +1200,7 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				rc = cam_sensor_update_power_settings(
 					cmd_buf,
 					total_cmd_buf_in_bytes,
-					&fctrl->power_info, remain_len);
+					&fctrl->power_info);
 				processed_cmd_buf_in_bytes +=
 					cmd_length_in_bytes;
 				cmd_buf += cmd_length_in_bytes/
@@ -1254,7 +1398,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 	uint32_t *offset = NULL;
 	uint32_t frm_offset = 0;
 	size_t len_of_buffer;
-	size_t remain_len;
+	size_t remaining_len_of_buff;
 	struct cam_control *ioctl_ctrl = NULL;
 	struct cam_packet *csl_packet = NULL;
 	struct cam_cmd_buf_desc *cmd_desc = NULL;
@@ -1294,7 +1438,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		return rc;
 	}
 
-	remain_len = len_of_buffer;
+	remaining_len_of_buff = len_of_buffer;
 	if ((sizeof(struct cam_packet) > len_of_buffer) ||
 		((size_t)config.offset >= len_of_buffer -
 		sizeof(struct cam_packet))) {
@@ -1305,13 +1449,14 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		goto rel_pkt_buf;
 	}
 
-	remain_len -= (size_t)config.offset;
+	remaining_len_of_buff -= config.offset;
 	/* Add offset to the flash csl header */
 	csl_packet = (struct cam_packet *)(generic_ptr + config.offset);
 
-	if (cam_packet_util_validate_packet(csl_packet,
-		remain_len)) {
-		CAM_ERR(CAM_FLASH, "Invalid packet params");
+	if (((size_t)(csl_packet->header.size) > remaining_len_of_buff)) {
+		CAM_ERR(CAM_FLASH,
+			"Inval pkt_header_size: %zu, len:of_buff: %zu",
+			csl_packet->header.size, remaining_len_of_buff);
 		rc = -EINVAL;
 		goto rel_pkt_buf;
 	}
@@ -1330,6 +1475,16 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 	if (csl_packet->header.request_id > fctrl->last_flush_req)
 		fctrl->last_flush_req = 0;
 
+	remaining_len_of_buff -= sizeof(struct cam_packet);
+
+	if ((sizeof(struct cam_cmd_buf_desc) > remaining_len_of_buff) ||
+		(csl_packet->num_cmd_buf * sizeof(struct cam_cmd_buf_desc) >
+			remaining_len_of_buff)) {
+		CAM_ERR(CAM_FLASH, "InVal len: %zu", remaining_len_of_buff);
+		rc = -EINVAL;
+		goto rel_pkt_buf;
+	}
+
 	switch (csl_packet->header.op_code & 0xFFFFFF) {
 	case CAM_FLASH_PACKET_OPCODE_INIT: {
 		/* INIT packet*/
@@ -1342,14 +1497,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 			CAM_ERR(CAM_FLASH, "Fail in get buffer: %d", rc);
 			goto rel_pkt_buf;
 		}
-		if ((len_of_buffer < sizeof(struct cam_flash_init)) ||
-			(cmd_desc->offset >
-			(len_of_buffer - sizeof(struct cam_flash_init)))) {
-			CAM_ERR(CAM_FLASH, "Not enough buffer");
-			rc = -EINVAL;
-			goto rel_pkt_buf;
-		}
-		remain_len = len_of_buffer - cmd_desc->offset;
+
 		cmd_buf = (uint32_t *)((uint8_t *)cmd_buf_ptr +
 			cmd_desc->offset);
 		cam_flash_info = (struct cam_flash_init *)cmd_buf;
@@ -1379,26 +1527,8 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		case CAMERA_SENSOR_FLASH_CMD_TYPE_INIT_FIRE: {
 			CAM_DBG(CAM_FLASH, "INIT_FIRE Operation");
 
-			if (remain_len < sizeof(struct cam_flash_set_on_off)) {
-				CAM_ERR(CAM_FLASH, "Not enough buffer");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
-
 			flash_operation_info =
 				(struct cam_flash_set_on_off *) cmd_buf;
-			if (!flash_operation_info) {
-				CAM_ERR(CAM_FLASH,
-					"flash_operation_info Null");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
-			if (flash_operation_info->count >
-				CAM_FLASH_MAX_LED_TRIGGERS) {
-				CAM_ERR(CAM_FLASH, "led count out of limit");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
 			fctrl->nrt_info.cmn_attr.count =
 				flash_operation_info->count;
 			fctrl->nrt_info.cmn_attr.request_id = 0;
@@ -1457,21 +1587,13 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 			goto rel_pkt_buf;
 		}
 
-		if ((len_of_buffer < sizeof(struct common_header)) ||
-			(cmd_desc->offset >
-			(len_of_buffer - sizeof(struct common_header)))) {
-			CAM_ERR(CAM_FLASH, "not enough buffer");
-			rc = -EINVAL;
-			goto rel_pkt_buf;
-		}
-		remain_len = len_of_buffer - cmd_desc->offset;
-
 		cmd_buf = (uint32_t *)((uint8_t *)cmd_buf_ptr +
 			cmd_desc->offset);
 		if (!cmd_buf) {
 			rc = -EINVAL;
 			goto rel_cmd_buf;
 		}
+
 		cmn_hdr = (struct common_header *)cmd_buf;
 
 		switch (cmn_hdr->cmd_type) {
@@ -1486,23 +1608,12 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				flash_data->cmn_attr.is_settings_valid = false;
 				goto rel_cmd_buf;
 			}
-			if (remain_len < sizeof(struct cam_flash_set_on_off)) {
-				CAM_ERR(CAM_FLASH, "Not enough buffer");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
 
 			flash_operation_info =
 				(struct cam_flash_set_on_off *) cmd_buf;
 			if (!flash_operation_info) {
 				CAM_ERR(CAM_FLASH,
 					"flash_operation_info Null");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
-			if (flash_operation_info->count >
-				CAM_FLASH_MAX_LED_TRIGGERS) {
-				CAM_ERR(CAM_FLASH, "led count out of limit");
 				rc = -EINVAL;
 				goto rel_cmd_buf;
 			}
@@ -1540,15 +1651,6 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 			CAM_ERR(CAM_FLASH, "Fail in get buffer: %d", rc);
 			goto rel_pkt_buf;
 		}
-
-		if ((len_of_buffer < sizeof(struct common_header)) ||
-			(cmd_desc->offset >
-			(len_of_buffer - sizeof(struct common_header)))) {
-			CAM_ERR(CAM_FLASH, "Not enough buffer");
-			rc = -EINVAL;
-			goto rel_pkt_buf;
-		}
-		remain_len = len_of_buffer - cmd_desc->offset;
 		cmd_buf = (uint32_t *)((uint8_t *)cmd_buf_ptr +
 			cmd_desc->offset);
 		cmn_hdr = (struct common_header *)cmd_buf;
@@ -1556,26 +1658,8 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		switch (cmn_hdr->cmd_type) {
 		case CAMERA_SENSOR_FLASH_CMD_TYPE_WIDGET: {
 			CAM_DBG(CAM_FLASH, "Widget Flash Operation");
-			if (remain_len < sizeof(struct cam_flash_set_on_off)) {
-				CAM_ERR(CAM_FLASH, "Not enough buffer");
-				rc = -EINVAL;
-				goto rel_pkt_buf;
-			}
 			flash_operation_info =
 				(struct cam_flash_set_on_off *) cmd_buf;
-			if (!flash_operation_info) {
-				CAM_ERR(CAM_FLASH,
-					"flash_operation_info Null");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
-			if (flash_operation_info->count >
-				CAM_FLASH_MAX_LED_TRIGGERS) {
-				CAM_ERR(CAM_FLASH, "led count out of limit");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
-
 			fctrl->nrt_info.cmn_attr.count =
 				flash_operation_info->count;
 			fctrl->nrt_info.cmn_attr.request_id = 0;
@@ -1597,11 +1681,6 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		case CAMERA_SENSOR_FLASH_CMD_TYPE_QUERYCURR: {
 			int query_curr_ma = 0;
 
-			if (remain_len < sizeof(struct cam_flash_query_curr)) {
-				CAM_ERR(CAM_FLASH, "Not enough buffer");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
 			flash_query_info =
 				(struct cam_flash_query_curr *)cmd_buf;
 
@@ -1628,25 +1707,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		}
 		case CAMERA_SENSOR_FLASH_CMD_TYPE_RER: {
 			rc = 0;
-			if (remain_len < sizeof(struct cam_flash_set_rer)) {
-				CAM_ERR(CAM_FLASH, "Not enough buffer");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
 			flash_rer_info = (struct cam_flash_set_rer *)cmd_buf;
-			if (!flash_rer_info) {
-				CAM_ERR(CAM_FLASH,
-					"flash_rer_info Null");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
-			if (flash_rer_info->count >
-				CAM_FLASH_MAX_LED_TRIGGERS) {
-				CAM_ERR(CAM_FLASH, "led count out of limit");
-				rc = -EINVAL;
-				goto rel_cmd_buf;
-			}
-
 			fctrl->nrt_info.cmn_attr.cmd_type =
 				CAMERA_SENSOR_FLASH_CMD_TYPE_RER;
 			fctrl->nrt_info.opcode = flash_rer_info->opcode;
