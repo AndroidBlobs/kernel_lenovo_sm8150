@@ -152,7 +152,6 @@ void sdhci_dumpregs(struct sdhci_host *host)
 	}
 
 	host->mmc->err_occurred = true;
-	host->mmc->last_failed_rq_time = ktime_get();
 
 	if (host->ops->dump_vendor_regs)
 		host->ops->dump_vendor_regs(host);
@@ -317,6 +316,8 @@ static void sdhci_do_reset(struct sdhci_host *host, u8 mask)
 		/* Resetting the controller clears many */
 		host->preset_enabled = false;
 	}
+	if (host->is_crypto_en)
+		host->crypto_reset_reqd = true;
 }
 
 static void sdhci_set_default_irqs(struct sdhci_host *host)
@@ -1309,6 +1310,11 @@ void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 		timeout += DIV_ROUND_UP(cmd->busy_timeout, 1000) * HZ + HZ;
 	else
 		timeout += 10 * HZ;
+#ifdef CONFIG_MMC_SDHCI_MSM_BH201
+	if(cmd->sw_cmd_timeout) {
+		timeout=jiffies+msecs_to_jiffies(cmd->sw_cmd_timeout);
+	}
+#endif
 	sdhci_mod_timer(host, cmd->mrq, timeout);
 
 	host->cmd = cmd;
@@ -1836,15 +1842,14 @@ static int sdhci_crypto_cfg(struct sdhci_host *host, struct mmc_request *mrq,
 {
 	int err = 0;
 
-	if (host->mmc->inlinecrypt_reset_needed &&
-			host->ops->crypto_engine_reset) {
+	if (host->crypto_reset_reqd && host->ops->crypto_engine_reset) {
 		err = host->ops->crypto_engine_reset(host);
 		if (err) {
 			pr_err("%s: crypto reset failed\n",
 					mmc_hostname(host->mmc));
 			goto out;
 		}
-		host->mmc->inlinecrypt_reset_needed = false;
+		host->crypto_reset_reqd = false;
 	}
 
 	if (host->ops->crypto_engine_cfg) {
@@ -2702,15 +2707,9 @@ int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	}
 
 	if (host->ops->platform_execute_tuning) {
-		/*
-		 * Make sure re-tuning won't get triggered for the CRC errors
-		 * occurred while executing tuning
-		 */
-		mmc_retune_disable(mmc);
 		err = host->ops->platform_execute_tuning(host, opcode);
-		mmc_retune_enable(mmc);
-		goto out;
-	}
+			goto out;
+		}
 
 	host->mmc->retune_period = tuning_count;
 
@@ -3110,7 +3109,9 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 
 	trace_mmc_cmd_rw_end(host->cmd->opcode, intmask,
 				sdhci_readl(host, SDHCI_RESPONSE));
-
+#ifdef CONFIG_MMC_SDHCI_MSM_BH201
+	host->cmd->err_int_mask =intmask;
+#endif
 	if (intmask & (SDHCI_INT_TIMEOUT | SDHCI_INT_CRC |
 		       SDHCI_INT_END_BIT | SDHCI_INT_INDEX |
 		       SDHCI_INT_ACMD12ERR)) {
@@ -3586,11 +3587,7 @@ out:
 			   mmc_hostname(host->mmc), unexpected);
 		MMC_TRACE(host->mmc, "Unexpected interrupt 0x%08x.\n",
 				unexpected);
-		if (host->mmc->cmdq_ops && host->mmc->cmdq_ops->dumpstate)
-			host->mmc->cmdq_ops->dumpstate(host->mmc);
-		else
-			sdhci_dumpregs(host);
-		BUG_ON(1);
+		sdhci_dumpregs(host);
 	}
 
 	return result;
@@ -4065,14 +4062,14 @@ static int sdhci_cmdq_crypto_cfg(struct mmc_host *mmc,
 	if (!host->is_crypto_en)
 		return 0;
 
-	if (mmc->inlinecrypt_reset_needed && host->ops->crypto_engine_reset) {
+	if (host->crypto_reset_reqd && host->ops->crypto_engine_reset) {
 		err = host->ops->crypto_engine_reset(host);
 		if (err) {
 			pr_err("%s: crypto reset failed\n",
 					mmc_hostname(host->mmc));
 			goto out;
 		}
-		mmc->inlinecrypt_reset_needed = false;
+		host->crypto_reset_reqd = false;
 	}
 
 	if (host->ops->crypto_engine_cmdq_cfg) {

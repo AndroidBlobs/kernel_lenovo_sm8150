@@ -54,6 +54,11 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
+#ifdef CONFIG_MMC_SDHCI_MSM_BH201
+#define IC_ADD_FUNCTION  1
+#include "../drivers/mmc/host/sdhci.h"
+#endif
+
 /* If the device is not responding */
 #define MMC_CORE_TIMEOUT_MS	(10 * 60 * 1000) /* 10 minute timeout */
 
@@ -455,16 +460,12 @@ int mmc_clk_update_freq(struct mmc_host *host,
 		goto invalid_state;
 	}
 
-	MMC_TRACE(host, "clock scale state %d freq %lu\n",
-			state, freq);
 	err = host->bus_ops->change_bus_speed(host, &freq);
 	if (!err)
 		host->clk_scaling.curr_freq = freq;
 	else
 		pr_err("%s: %s: failed (%d) at freq=%lu\n",
 			mmc_hostname(host), __func__, err, freq);
-	MMC_TRACE(host, "clock scale state %d freq %lu done with err %d\n",
-			state, freq, err);
 
 invalid_state:
 	if (cmdq_mode) {
@@ -513,7 +514,15 @@ static int mmc_devfreq_set_target(struct device *dev,
 
 	pr_debug("%s: target freq = %lu (%s)\n", mmc_hostname(host),
 		*freq, current->comm);
+#ifdef IC_ADD_FUNCTION
+	{
+		struct sdhci_host *sdhost = mmc_priv(host);
 
+		if (sdhci_bht_target_host(sdhost)) {
+			goto out;
+		}
+	}
+#endif
 	spin_lock_bh(&clk_scaling->lock);
 	if (clk_scaling->target_freq == *freq ||
 		clk_scaling->skip_clk_scale_freq_update) {
@@ -782,7 +791,6 @@ int mmc_init_clk_scaling(struct mmc_host *host)
 		host->ios.clock);
 
 	host->clk_scaling.enable = true;
-	host->clk_scaling.is_suspended = false;
 
 	return err;
 }

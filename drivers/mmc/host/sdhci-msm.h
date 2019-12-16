@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +18,11 @@
 #include <linux/mmc/mmc.h>
 #include <linux/pm_qos.h>
 #include "sdhci-pltfm.h"
+
+#define CORE_FREQ_100MHZ	(100 * 1000 * 1000)
+
+#define NUM_TUNING_PHASES		16
+#define MAX_DRV_TYPES_SUPPORTED_HS200	4
 
 /* This structure keeps information per regulator */
 struct sdhci_msm_reg_data {
@@ -157,6 +162,8 @@ struct sdhci_msm_pltfm_data {
 	bool sdr104_wa;
 	u32 ice_clk_max;
 	u32 ice_clk_min;
+	u32 ddr_config;
+	bool rclk_wa;
 	u32 *bus_clk_table;
 	unsigned char bus_clk_cnt;
 };
@@ -193,23 +200,6 @@ struct sdhci_msm_regs_restore {
 	u32 hc_3c_3e;
 	u32 hc_caps_1;
 	u32 testbus_config;
-	u32 dll_config;
-	u32 dll_config2;
-	u32 dll_config3;
-	u32 dll_usr_ctl;
-};
-
-/*
- * DLL registers which needs be programmed with HSR settings.
- * Add any new register only at the end and don't change the
- * seqeunce.
- */
-struct sdhci_msm_dll_hsr {
-	u32 dll_config;
-	u32 dll_config_2;
-	u32 dll_config_3;
-	u32 dll_usr_ctl;
-	u32 ddr_config;
 };
 
 struct sdhci_msm_debug_data {
@@ -273,7 +263,9 @@ struct sdhci_msm_host {
 	bool use_7nm_dll;
 	int soc_min_rev;
 	struct workqueue_struct *pm_qos_wq;
-	struct sdhci_msm_dll_hsr *dll_hsr;
+	int sdr50_notuning_sela_inject_flag;
+	int sdr50_notuning_crc_error_flag;
+	u32 sdr50_notuning_sela_rx_inject;
 };
 
 extern char *saved_command_line;
@@ -287,6 +279,13 @@ void sdhci_msm_pm_qos_cpu_init(struct sdhci_host *host,
 void sdhci_msm_pm_qos_cpu_vote(struct sdhci_host *host,
 		struct sdhci_msm_pm_qos_latency *latency, int cpu);
 bool sdhci_msm_pm_qos_cpu_unvote(struct sdhci_host *host, int cpu, bool async);
-
+int sdhci_msm_hs400_dll_calibration(struct sdhci_host *host);
+int msm_init_cm_dll(struct sdhci_host *host);
+int msm_config_cm_dll_phase(struct sdhci_host *host, u8 phase);
+void sdhci_msm_set_mmc_drv_type(struct sdhci_host *host, u32 opcode,
+		u8 drv_type);
+int msm_find_most_appropriate_phase(struct sdhci_host *host,
+				u8 *phase_table, u8 total_phases);
+int sdhci_msm_execute_tuning(struct sdhci_host *host, u32 opcode);
 
 #endif /* __SDHCI_MSM_H__ */
