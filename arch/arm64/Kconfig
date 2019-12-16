@@ -309,6 +309,26 @@ source "kernel/Kconfig.freezer"
 
 source "arch/arm64/Kconfig.platforms"
 
+choice
+    bool "Product selection"
+    default PRODUCT_HEART
+    help
+      select build product
+
+config PRODUCT_HEART
+    bool "heart"
+    help
+      This enables support for heart product. If you don't
+      know what to do here, say N
+
+config PRODUCT_ZIPPO
+    bool "zippo"
+    help
+      This enables support for zippo product. If you don't
+      know what to do here, say N
+
+endchoice
+
 menu "Bus support"
 
 config PCI
@@ -508,7 +528,7 @@ config ARM64_ERRATUM_1024718
 
 config ARM64_ERRATUM_1286807
 	bool "Cortex-A76: Modification of the translation table for a virtual address might lead to read-after-read ordering violation"
-	default n
+	default y
 	select ARM64_WORKAROUND_REPEAT_TLBI
 	help
 	  This option adds workaround for ARM Cortex-A76 erratum 1286807
